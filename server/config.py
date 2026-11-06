@@ -1,10 +1,21 @@
-"""Central configuration for ARTOYOU, overridable via environment variables."""
+"""Central configuration for ARTOYOU, overridable via environment variables.
+
+Values are read from the process environment; a local `.env` file (git-ignored)
+is loaded automatically when present — perfect for the Telegram bot token.
+"""
 
 import os
 import shutil
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+try:  # .env is optional — never required, never committed
+    from dotenv import load_dotenv
+
+    load_dotenv(BASE_DIR / ".env")
+except Exception:  # pragma: no cover - dotenv is best-effort
+    pass
 
 DOWNLOAD_DIR = Path(
     os.getenv("ARTOYOU_DOWNLOAD_DIR", str(BASE_DIR / "downloads"))
@@ -31,6 +42,18 @@ YT_COOKIES_FILE = os.getenv("YT_COOKIES_FILE", "").strip() or None
 YT_PLAYER_CLIENTS = [
     c.strip() for c in os.getenv("YT_PLAYER_CLIENT", "").split(",") if c.strip()
 ]
+
+# Telegram bot (optional). When TELEGRAM_BOT_TOKEN is set, the bot starts
+# inside the same process and shares the download queue with the web UI.
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "").strip() or None
+TELEGRAM_ALLOWED_USERS = {
+    int(part)
+    for part in os.getenv("TELEGRAM_ALLOWED_USERS", "").replace(";", ",").split(",")
+    if part.strip().isdigit()
+}
+# Self-hosted local Bot API server (allows >50MB uploads, up to 2GB).
+TELEGRAM_API_BASE_URL = os.getenv("TELEGRAM_API_BASE_URL", "").strip() or None
+TELEGRAM_FILE_BASE_URL = os.getenv("TELEGRAM_FILE_BASE_URL", "").strip() or None
 
 # Per-request network timeout (seconds) for metadata extraction.
 SOCKET_TIMEOUT = int(os.getenv("SOCKET_TIMEOUT", "30"))

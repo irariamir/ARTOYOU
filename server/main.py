@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-import re
-from datetime import datetime
+import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Literal
 
 import yt_dlp
 from fastapi import FastAPI, HTTPException, Request
@@ -18,9 +18,50 @@ from . import __version__, config
 from .jobs import manager
 from .ytdl import InfoError, duration_error, extract_info, info_payload, normalize_youtube_url
 
+logger = logging.getLogger("artoyou")
+
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
-app = FastAPI(title="ARTOYOU", version=__version__, docs_url=None, redoc_url=None)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Start the Telegram bot (if configured) alongside the web server."""
+    app.state.telegram_status = "disabled"
+    bot_app = None
+    if config.TELEGRAM_BOT_TOKEN:
+        try:
+            from .bot import build_bot_application
+
+            bot_app = build_bot_application(config.TELEGRAM_BOT_TOKEN)
+            await bot_app.initialize()
+            await bot_app.start()
+            if bot_app.updater is not None:
+                await bot_app.updater.start_polling(
+                    drop_pending_updates=True, allowed_updates=["message", "callback_query"]
+                )
+            app.state.telegram_status = "running"
+            logger.info("Telegram bot started (polling).")
+        except Exception:
+            app.state.telegram_status = "error"
+            logger.exception("Telegram bot failed to start — the web app keeps working.")
+            bot_app = None
+    else:
+        logger.info("TELEGRAM_BOT_TOKEN not set — Telegram bot disabled.")
+
+    yield
+
+    if bot_app is not None:
+        try:
+            if bot_app.updater is not None and bot_app.updater.running:
+                await bot_app.updater.stop()
+            await bot_app.stop()
+            await bot_app.shutdown()
+            logger.info("Telegram bot stopped.")
+        except Exception:
+            logger.exception("Error while stopping the Telegram bot.")
+
+
+app = FastAPI(title="ARTOYOU", version=__version__, docs_url=None, redoc_url=None, lifespan=lifespan)
 
 
 # --------------------------------------------------------------- security
@@ -74,7 +115,7 @@ class DownloadRequest(BaseModel):
 
 # ------------------------------------------------------------------ routes
 @app.get("/api/health")
-def health():
+def health(request: Request):
     return {
         "status": "ok",
         "version": __version__,
@@ -82,6 +123,7 @@ def health():
         "ffmpeg": bool(config.FFMPEG_LOCATION),
         "limits": {"min": config.MIN_DURATION, "max": config.MAX_DURATION},
         "auth": bool(config.APP_TOKEN),
+        "telegram": getattr(request.app.state, "telegram_status", "disabled"),
     }
 
 
