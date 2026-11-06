@@ -28,7 +28,7 @@ import uuid
 from pathlib import Path
 from typing import Optional
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, InputFile, Update
 from telegram.constants import ParseMode
 from telegram.error import BadRequest, NetworkError, TelegramError
 from telegram.ext import (
@@ -423,7 +423,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             [[InlineKeyboardButton("❌ لغو دانلود", callback_data=f"j:{job.id}")]]
         ),
     )
-    task = asyncio.create_task(_watch_job(context.application, chat_id, progress_msg.message_id, job.id, entry["title"], label))
+    task = asyncio.create_task(_watch_job(context.bot, chat_id, progress_msg.message_id, job.id, entry["title"], label))
     _PROGRESS_TASKS.add(task)
     task.add_done_callback(_PROGRESS_TASKS.discard)
 
@@ -526,22 +526,28 @@ async def _deliver_file(bot, chat_id, job, safe_title, label) -> None:
         return
 
     filename = (job.filename or "file").lower()
+    display_name = job.filename or "file"
     try:
-        if job.kind == "video" and filename.endswith((".mp4", ".mkv", ".mov")):
-            await bot.send_video(
-                chat_id=chat_id, video=job.filepath, caption=caption,
-                parse_mode=ParseMode.HTML, supports_streaming=True, read_timeout=900, write_timeout=900,
-            )
-        elif filename.endswith((".mp3", ".m4a", ".opus", ".ogg")):
-            await bot.send_audio(
-                chat_id=chat_id, audio=job.filepath, caption=caption,
-                parse_mode=ParseMode.HTML, read_timeout=900, write_timeout=900,
-            )
-        else:
-            await bot.send_document(
-                chat_id=chat_id, document=job.filepath, caption=caption,
-                parse_mode=ParseMode.HTML, read_timeout=900, write_timeout=900,
-            )
+        # PTB treats plain strings as file_id/URL — real uploads must use InputFile.
+        # Stream from disk (read_file_handle=False) so multi-hundred-MB files
+        # don't sit in RAM; the handle stays open for the duration of the send.
+        with open(job.filepath, "rb") as fh:
+            payload = InputFile(fh, filename=display_name, read_file_handle=False)
+            if job.kind == "video" and filename.endswith((".mp4", ".mkv", ".mov")):
+                await bot.send_video(
+                    chat_id=chat_id, video=payload, caption=caption,
+                    parse_mode=ParseMode.HTML, supports_streaming=True, read_timeout=900, write_timeout=900,
+                )
+            elif filename.endswith((".mp3", ".m4a", ".opus", ".ogg")):
+                await bot.send_audio(
+                    chat_id=chat_id, audio=payload, caption=caption,
+                    parse_mode=ParseMode.HTML, read_timeout=900, write_timeout=900,
+                )
+            else:
+                await bot.send_document(
+                    chat_id=chat_id, document=payload, caption=caption,
+                    parse_mode=ParseMode.HTML, read_timeout=900, write_timeout=900,
+                )
     except BadRequest as exc:
         logger.warning("send_file rejected: %s", exc)
         await bot.send_message(
@@ -567,13 +573,17 @@ async def _deliver_file(bot, chat_id, job, safe_title, label) -> None:
 
 
 # ───────────────────────────────────────────────────────── bootstrap
-def build_bot_application(token: str) -> Application:
+def build_bot_application(token: str, *, base_url: Optional[str] = None,
+                          base_file_url: Optional[str] = None) -> Application:
+    """Build the Application. base_url/base_file_url are injectable for tests
+    and for a self-hosted local Bot API server (TELEGRAM_API_BASE_URL)."""
+    api_base = base_url or config.TELEGRAM_API_BASE_URL
+    file_base = base_file_url or config.TELEGRAM_FILE_BASE_URL or config.TELEGRAM_API_BASE_URL
+
     builder = Application.builder().token(token).concurrent_updates(True)
-    if config.TELEGRAM_API_BASE_URL:
-        builder = builder.base_url(config.TELEGRAM_API_BASE_URL.rstrip("/") + "/bot")
-        builder = builder.base_file_url(
-            (config.TELEGRAM_FILE_BASE_URL or config.TELEGRAM_API_BASE_URL).rstrip("/") + "/file/bot"
-        )
+    if api_base:
+        builder = builder.base_url(api_base.rstrip("/") + "/bot")
+        builder = builder.base_file_url((file_base or api_base).rstrip("/") + "/file/bot")
     application = builder.connect_timeout(60).read_timeout(120).write_timeout(900).build()
 
     application.add_handler(CommandHandler("start", cmd_start))
