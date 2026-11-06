@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARTOYOU — دانلودر یوتیوب | هر لینک، بالاترین کیفیت</title>
+  <meta name="description" content="سامانه شخصی دانلود ویدیوهای یوتیوب از ۵ دقیقه تا ۱ ساعت با کیفیت‌های مختلف از 360p تا 8K و استخراج MP3 — فقط لینک را بچسبان." />
+  <meta name="theme-color" content="#0b0b12" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23ff0033'/%3E%3Cstop offset='1' stop-color='%23ff7a18'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Cpath d='M26 20l18 12-18 12z' fill='white'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <!-- Ambient background -->
+  <div class="bg-fx" aria-hidden="true">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+    <div class="grid-overlay"></div>
+  </div>
+
+  <!-- ═══════════ NAV ═══════════ -->
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="brand" href="/">
+        <span class="logo-badge" aria-hidden="true">
+          <svg viewBox="0 0 64 64" width="34" height="34"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff0033"/><stop offset="1" stop-color="#ff7a18"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="url(#lg)"/><path d="M26 20.5l18 11.5-18 11.5z" fill="#fff"/></svg>
+        </span>
+        <span class="brand-text">
+          <span class="brand-name">ARTOYOU</span>
+          <span class="brand-sub">YouTube Downloader Studio</span>
+        </span>
+      </a>
+      <div class="nav-actions">
+        <span id="limitsPill" class="limits-pill" title="بازه مجاز مدت ویدیو">۵–۶۰ دقیقه</span>
+        <span id="statusPill" class="status-pill" data-state="checking">
+          <span class="status-dot"></span><span id="statusText">اتصال به سرور…</span>
+        </span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ═══════════ HERO ═══════════ -->
+    <section class="hero">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <div class="kicker"><span class="kicker-dot"></span> دانلودر شخصی یوتیوب · بدون ثبت‌نام · بدون واترمارک</div>
+          <h1 class="hero-title">هر لینکی،<br/><span class="grad">با بالاترین کیفیتی</span><br/>که دلت می‌خواد.</h1>
+          <p class="hero-sub">لینک ویدیوی یوتیوب را بچسبان؛ از ۵ دقیقه تا ۱ ساعت را در کیفیت‌های <b>360p</b> تا <b>8K</b> یا به صورت <b>MP3</b> تحویل بگیر — سریع، تمیز و با یک کلیک.</p>
+          <div class="chip-row">
+            <span class="chip"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M10 10l4 2-4 2z" fill="currentColor" stroke="none"/></svg>تا ۸K واقعی</span>
+            <span class="chip"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>استخراج MP3</span>
+            <span class="chip"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22a10 10 0 1 0-10-10"/><path d="M12 6v6l4 2"/></svg>تا ۱ ساعت ویدیو</span>
+            <span class="chip"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>۱۰۰٪ رایگان و شخصی</span>
+          </div>
+        </div>
+
+        <!-- Paste panel -->
+        <div class="panel paste-panel" id="pastePanel">
+          <div class="panel-head">
+            <h2 class="panel-title"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> تحلیل لینک</h2>
+            <span class="private-badge"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> شخصی و امن</span>
+          </div>
+
+          <label class="field-label" for="urlInput">لینک ویدیوی یوتیوب</label>
+          <div class="url-box" id="urlBox">
+            <svg class="url-icon" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 32 32 0 0 0 0 12a32 32 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A32 32 0 0 0 24 12a32 32 0 0 0-.5-5.8zM9.6 15.6V8.4l6 3.6z"/></svg>
+            <input id="urlInput" class="url-input" type="text" dir="ltr" inputmode="url" spellcheck="false" autocomplete="off" placeholder="https://www.youtube.com/watch?v=…" aria-label="لینک ویدیوی یوتیوب" />
+            <button id="pasteBtn" class="icon-btn" type="button" title="چسباندن از کلیپ‌بورد" aria-label="چسباندن لینک">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3"/></svg>
+              <span>چسباندن</span>
+            </button>
+          </div>
+
+          <button id="analyzeBtn" class="primary-btn" type="button">
+            <span class="btn-label"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> تحلیل و دریافت کیفیت‌ها</span>
+            <span class="btn-loading" aria-hidden="true"><span class="spinner"></span> در حال تحلیل ویدیو…</span>
+          </button>
+
+          <div id="errorBox" class="error-box" role="alert" hidden>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <div><b>اشکالی پیش آمد</b><p id="errorText"></p></div>
+          </div>
+
+          <p class="hint">فقط لینک ویدیوهای تکی پذیرفته می‌شود (نه پلی‌لیست و نه استریم زنده).<br/>کیفیت‌های بالاتر از 720p با ترکیب تصویر و صدا و با کمک ffmpeg ساخته می‌شوند.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ RESULT ═══════════ -->
+    <section id="resultSection" class="result-section" hidden>
+      <div class="result-card">
+        <div class="thumb-wrap">
+          <img id="thumbImg" class="thumb-img" alt="تامب‌نیل ویدیو" />
+          <span id="durationBadge" class="duration-badge" dir="ltr">00:00</span>
+        </div>
+        <div class="result-meta">
+          <h3 id="videoTitle" class="video-title">—</h3>
+          <div class="meta-row">
+            <span class="meta-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg><span id="uploaderName">—</span></span>
+            <span class="meta-item"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg><span id="viewCount">—</span> بازدید</span>
+            <span class="meta-item" id="uploadDateItem"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span id="uploadDate">—</span></span>
+          </div>
+          <div id="rangeWarning" class="range-warning" hidden>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+            <span id="rangeWarningText"></span>
+          </div>
+          <div class="options-block">
+            <h4 class="options-title">کیفیت ویدیو</h4>
+            <div id="qualityGrid" class="quality-grid"></div>
+          </div>
+          <div class="options-block">
+            <h4 class="options-title">فقط صدا</h4>
+            <div id="audioRow" class="audio-row"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ JOBS ═══════════ -->
+    <section class="jobs-section">
+      <div class="section-head">
+        <h3 class="section-title"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> صف دانلود</h3>
+        <button id="clearFinishedBtn" class="ghost-btn small" type="button">پاک‌سازی دانلودهای تمام‌شده</button>
+      </div>
+      <div id="jobsEmpty" class="jobs-empty">هنوز چیزی برای دانلود نداری — یه لینک بچسبون و شروع کن ✨</div>
+      <div id="jobsList" class="jobs-list"></div>
+    </section>
+
+    <!-- ═══════════ HISTORY ═══════════ -->
+    <section class="history-section" id="historySection" hidden>
+      <div class="section-head">
+        <h3 class="section-title"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v5h5"/><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8"/><path d="M12 7v5l4 2"/></svg> تاریخچه دانلودها</h3>
+        <button id="clearHistoryBtn" class="ghost-btn small" type="button">پاک‌کردن تاریخچه</button>
+      </div>
+      <ul id="historyList" class="history-list"></ul>
+    </section>
+
+    <!-- ═══════════ HOW IT WORKS ═══════════ -->
+    <section class="how-section">
+      <h3 class="section-title center">چطور کار می‌کند؟</h3>
+      <div class="steps">
+        <div class="step"><div class="step-num">۱</div><h4>لینک را کپی کن</h4><p>از یوتیوب، آدرس ویدیوی مورد نظرت را کپی کن (watch یا youtu.be — هر دو کار می‌کنند).</p></div>
+        <div class="step-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div>
+        <div class="step"><div class="step-num">۲</div><h4>کیفیت را انتخاب کن</h4><p>تحلیل خودکار، همه کیفیت‌ها را با حجم تقریبی نشان می‌دهد — از 360p تا 8K یا فقط صدا.</p></div>
+        <div class="step-arrow" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg></div>
+        <div class="step"><div class="step-num">۳</div><h4>تحویل بگیر</h4><p>دانلود در صف قرار می‌گیرد؛ نوار پیشرفت، سرعت و زمان باقی‌مانده را زنده می‌بینی.</p></div>
+      </div>
+    </section>
+
+    <!-- ═══════════ FEATURES ═══════════ -->
+    <section class="features">
+      <div class="feature-card"><div class="f-icon f-red"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M10 9.5l4.5 2.5-4.5 2.5z" fill="currentColor" stroke="none"/></svg></div><h4>کیفیت واقعی تا 8K</h4><p>ترکیب خودکار تصویر و صدا با ffmpeg — خروجی MP4 سازگار با همه پخش‌کننده‌ها.</p></div>
+      <div class="feature-card"><div class="f-icon f-violet"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><h4>MP3 با یک کلیک</h4><p>فقط صدا را با بهترین کیفیت (تا 320k) بگیر؛ یا M4A اصلی بدون هیچ تبدیل و افت کیفیتی.</p></div>
+      <div class="feature-card"><div class="f-icon f-amber"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><h4>ویدیوهای بلند</h4><p>از ۵ دقیقه تا ۱ ساعت — مستند، سخنرانی، لایو آرشیوشده؛ همه بدون محدودیت حجم.</p></div>
+      <div class="feature-card"><div class="f-icon f-green"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><h4>کاملاً شخصی</h4><p>بدون اکانت، بدون ترکینگ؛ فایلی که می‌گیرید فقط روی همین سرور ساخته می‌شود.</p></div>
+    </section>
+  </main>
+
+  <!-- ═══════════ FOOTER ═══════════ -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <p><b>ARTOYOU</b> — دانلودر شخصی یوتیوب · ساخته‌شده با <span dir="ltr">FastAPI + yt-dlp + ffmpeg</span></p>
+      <p class="footer-note">استفاده شخصی و غیرتجاری. رعایت شرایط استفاده یوتیوب و قوانین کپی‌رایت بر عهده کاربر است.</p>
+    </div>
+  </footer>
+
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

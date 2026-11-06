@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+
+# Downloads & temp files (never commit user media)
+downloads/
+*.part
+*.ytdl
+
+# Env / secrets
+.env
+*.cookies.txt
+cookies.txt
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
