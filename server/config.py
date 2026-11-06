@@ -42,6 +42,10 @@ YT_COOKIES_FILE = os.getenv("YT_COOKIES_FILE", "").strip() or None
 YT_PLAYER_CLIENTS = [
     c.strip() for c in os.getenv("YT_PLAYER_CLIENT", "").split(",") if c.strip()
 ]
+# Optional proxy for YouTube traffic only (e.g. "socks5h://127.0.0.1:10808").
+# Useful where YouTube is unreachable directly. Telegram is NOT proxied by this —
+# run the whole app under a system VPN/proxy for that, or use a local Bot API.
+YT_PROXY = os.getenv("YT_PROXY", "").strip() or None
 
 # Telegram bot (optional). When TELEGRAM_BOT_TOKEN is set, the bot starts
 # inside the same process and shares the download queue with the web UI.

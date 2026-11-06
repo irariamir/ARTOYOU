@@ -7,6 +7,13 @@ file back into the chat (or explains why it cannot).
 
 The bot runs INSIDE the FastAPI process (started from the app lifespan),
 so jobs it creates are the same JobManager jobs shown in the web UI.
+
+Access control (pick one — static allowlist wins when set):
+
+1. TELEGRAM_ALLOWED_USERS="111,222" → only those user ids may use the bot.
+2. Nothing configured → the FIRST user to contact the bot becomes its
+   permanent owner (persisted in <downloads>/.bot_owner); everyone else is
+   rejected. Reset by deleting that file. Perfect for a personal bot.
 """
 
 from __future__ import annotations
@@ -14,8 +21,11 @@ from __future__ import annotations
 import asyncio
 import html
 import logging
+import os
+import threading
 import time
 import uuid
+from pathlib import Path
 from typing import Optional
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -43,11 +53,67 @@ PROGRESS_EDIT_INTERVAL = 4.0     # seconds between message edits (flood control)
 
 _ANALYSIS_CACHE: dict[str, dict] = {}
 _PROGRESS_TASKS: set[asyncio.Task] = set()
+_OWNER_LOCK = threading.Lock()
 
 # Upload ceiling: 48MB on the cloud Bot API (50MB hard limit),
 # ~1.9GB when pointed at a self-hosted local Bot API server.
 def max_send_bytes() -> int:
     return (1900 if config.TELEGRAM_API_BASE_URL else 48) * 1024 * 1024
+
+
+# ───────────────────────────────────────────────────────── ownership
+def _owner_store_path() -> Path:
+    return config.DOWNLOAD_DIR / ".bot_owner"
+
+
+def _read_owner() -> Optional[int]:
+    path = _owner_store_path()
+    try:
+        if path.exists():
+            text = path.read_text(encoding="utf-8").strip()
+            return int(text) if text.isdigit() else None
+    except OSError:
+        logger.warning("Could not read owner file %s", path)
+    return None
+
+
+def _write_owner(user_id: int) -> bool:
+    path = _owner_store_path()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(str(user_id), encoding="utf-8")
+        logger.info("Telegram bot ownership claimed by user id %s", user_id)
+        return True
+    except OSError:
+        logger.warning("Could not persist bot owner to %s", path)
+        return False
+
+
+def reset_owner() -> bool:
+    """Delete the persisted owner so the next user to message the bot can claim it."""
+    with _OWNER_LOCK:
+        try:
+            _owner_store_path().unlink(missing_ok=True)
+            return True
+        except OSError:
+            return False
+
+
+def check_access(user_id: int) -> tuple[bool, bool]:
+    """Return (allowed, just_claimed).
+
+    - Static allowlist (TELEGRAM_ALLOWED_USERS) takes precedence: membership or deny.
+    - Otherwise the first user to interact becomes the persisted owner.
+    """
+    static = config.TELEGRAM_ALLOWED_USERS
+    if static:
+        return (user_id in static), False
+    with _OWNER_LOCK:
+        owner = _read_owner()
+        if owner is None:
+            _write_owner(user_id)
+            return True, True
+        return (user_id == owner), False
 
 
 # ───────────────────────────────────────────────────────────── cache
@@ -112,13 +178,6 @@ def _parse_callback(data: str) -> tuple[str, Optional[str], Optional[int]]:
     return kind, key, idx
 
 
-def _is_allowed(user_id: Optional[int]) -> bool:
-    allowed = config.TELEGRAM_ALLOWED_USERS
-    if not allowed:
-        return True  # open bot — see README to restrict
-    return user_id in allowed
-
-
 def _extract_url(text: str) -> Optional[str]:
     for token in text.split():
         token = token.strip().rstrip(").,،؛")
@@ -127,12 +186,52 @@ def _extract_url(text: str) -> Optional[str]:
     return None
 
 
+_CLAIM_MESSAGE = (
+    "😎 <b>تو مالک این بات شدی!</b> من شناسه‌ی تو را روی همین سرور ذخیره کردم؛\n"
+    "از این لحظه به بعد هیچ‌کس دیگری نمی‌تواند از بات استفاده کند."
+)
+
+
+async def _guard(update: Update) -> bool:
+    """Common entry guard: checks access, handles first-user claim + denial."""
+    user = update.effective_user
+    uid = user.id if user else None
+    if uid is None:
+        return False
+    allowed, claimed = check_access(uid)
+    if not allowed:
+        await _deny(update, uid)
+        return False
+    if claimed:
+        try:
+            if update.message:
+                await update.message.reply_html(_CLAIM_MESSAGE)
+            elif update.callback_query:
+                await update.callback_query.answer("تو مالک بات شدی! 🎉")
+        except TelegramError:
+            pass
+    return True
+
+
+async def _deny(update: Update, user_id: int) -> None:
+    text = (
+        "⛔️ این بات <b>خصوصی</b> است و فقط صاحبش می‌تواند از آن استفاده کند.\n\n"
+        f"شناسه عددی شما: <code>{user_id}</code>"
+    )
+    try:
+        if update.message:
+            await update.message.reply_html(text)
+        elif update.callback_query:
+            await update.callback_query.answer("⛔️ دسترسی ندارید.", show_alert=True)
+    except TelegramError:
+        pass
+
+
 # ────────────────────────────────────────────────────────── handlers
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user = update.effective_user
-    if not _is_allowed(user.id if user else None):
-        await _deny(update)
+    if not await _guard(update):
         return
+    user = update.effective_user
     name = html.escape((user.first_name if user else "") or "دوست")
     await update.message.reply_html(
         f"سلام {name}! 👋\n\n"
@@ -146,9 +245,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user = update.effective_user
-    if not _is_allowed(user.id if user else None):
-        await _deny(update)
+    if not await _guard(update):
         return
     await update.message.reply_html(
         "<b>راهنمای استفاده</b>\n\n"
@@ -161,19 +258,8 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
-async def _deny(update: Update) -> None:
-    uid = update.effective_user.id if update.effective_user else "?"
-    await update.message.reply_html(
-        "⛔️ این بات <b>خصوصی</b> است و شما دسترسی ندارید.\n\n"
-        f"شناسه عددی شما: <code>{uid}</code>\n"
-        "برای فعال‌سازی، این شناسه را به متغیر <code>TELEGRAM_ALLOWED_USERS</code> روی سرور اضافه کن."
-    )
-
-
 async def handle_link(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    user = update.effective_user
-    if not _is_allowed(user.id if user else None):
-        await _deny(update)
+    if not await _guard(update):
         return
 
     text = (update.message.text or "").strip()
@@ -277,9 +363,7 @@ async def handle_link(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
 
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
-    user = update.effective_user
-    if not _is_allowed(user.id if user else None):
-        await query.answer("⛔️ دسترسی ندارید.")
+    if not await _guard(update):
         return
 
     kind, key, idx = _parse_callback(query.data or "")
@@ -417,6 +501,16 @@ async def _deliver_file(bot, chat_id, job, safe_title, label) -> None:
     limit = max_send_bytes()
     caption = f"<b>{safe_title}</b>\n{html.escape(label)} · {_fmt_size(size)}"
 
+    if job.filepath and not os.path.exists(job.filepath):
+        job = None  # swept from disk meanwhile
+
+    if job is None:
+        await bot.send_message(
+            chat_id=chat_id,
+            text="⚠️ فایل دیگر روی سرور نیست — احتمالاً منقضی شده و پاک شده است. دوباره دانلودش کن.",
+        )
+        return
+
     if size > limit:
         await bot.send_message(
             chat_id=chat_id,
@@ -463,6 +557,12 @@ async def _deliver_file(bot, chat_id, job, safe_title, label) -> None:
         await bot.send_message(
             chat_id=chat_id,
             text="⚠️ اتصال به تلگرام هنگام ارسال فایل قطع شد — فایل روی سرور آماده است و از رابط وب قابل دریافت است.",
+        )
+    except OSError:
+        logger.exception("send_file filesystem error")
+        await bot.send_message(
+            chat_id=chat_id,
+            text="⚠️ خواندن فایل از دیسک ممکن نشد — دوباره دانلودش کن.",
         )
 
 

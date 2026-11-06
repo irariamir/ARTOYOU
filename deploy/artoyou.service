@@ -1,0 +1,29 @@
+# Sample systemd USER unit — keeps ARTOYOU running and restarts on failure/boot.
+# Install:
+#   mkdir -p ~/.config/systemd/user
+#   cp deploy/artoyou.service ~/.config/systemd/user/artoyou.service
+#   # edit WorkingDirectory to your clone path, then:
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now artoyou
+#   # logs: journalctl --user -u artoyou -f
+# For boot without login also run: loginctl enable-linger $USER
+
+[Unit]
+Description=ARTOYOU — YouTube downloader + Telegram bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# ── change this to where you cloned the repo ──
+WorkingDirectory=%h/ARTOYOU
+# Bind to localhost only — use a reverse proxy (or HOST=0.0.0.0) if you need LAN access
+Environment=HOST=127.0.0.1
+Environment=PORT=8000
+ExecStart=/usr/bin/env bash start.sh
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+
+[Install]
+WantedBy=default.target

@@ -223,6 +223,8 @@ class JobManager:
             opts["cookiefile"] = config.YT_COOKIES_FILE
         if config.YT_PLAYER_CLIENTS:
             opts["extractor_args"] = {"youtube": {"player_client": config.YT_PLAYER_CLIENTS}}
+        if config.YT_PROXY:
+            opts["proxy"] = config.YT_PROXY
         if config.FFMPEG_LOCATION:
             opts["ffmpeg_location"] = config.FFMPEG_LOCATION
 

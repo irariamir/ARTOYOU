@@ -107,6 +107,57 @@ class ExtractUrlTest(unittest.TestCase):
         self.assertIsNone(bot._extract_url("سلام خوبی؟"))
 
 
+class OwnershipTest(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.mkdtemp(prefix="artoyou-owner-")
+        self._orig_dir = config.DOWNLOAD_DIR
+        self._orig_static = config.TELEGRAM_ALLOWED_USERS
+        config.DOWNLOAD_DIR = Path(self._tmp)
+        config.TELEGRAM_ALLOWED_USERS = set()
+        (Path(self._tmp) / ".bot_owner").unlink(missing_ok=True)
+
+    def tearDown(self):
+        config.DOWNLOAD_DIR = self._orig_dir
+        config.TELEGRAM_ALLOWED_USERS = self._orig_static
+
+    def test_first_user_claims_ownership(self):
+        allowed, claimed = bot.check_access(111111)
+        self.assertTrue(allowed)
+        self.assertTrue(claimed)
+        # persisted — survives "restart"
+        self.assertEqual(bot._read_owner(), 111111)
+
+    def test_second_user_denied_after_claim(self):
+        bot.check_access(111111)  # owner claimed
+        for _ in range(3):
+            allowed, claimed = bot.check_access(222222)
+            self.assertFalse(allowed)
+            self.assertFalse(claimed)
+        # owner still allowed, no re-claim
+        allowed, claimed = bot.check_access(111111)
+        self.assertTrue(allowed)
+        self.assertFalse(claimed)
+
+    def test_reset_allows_new_owner(self):
+        bot.check_access(111111)
+        self.assertTrue(bot.reset_owner())
+        allowed, claimed = bot.check_access(222222)
+        self.assertTrue(allowed)
+        self.assertTrue(claimed)
+
+    def test_static_allowlist_takes_precedence(self):
+        # No owner file, but static list set → only list members allowed,
+        # and nobody gets auto-claimed.
+        config.TELEGRAM_ALLOWED_USERS = {333333}
+        allowed, claimed = bot.check_access(333333)
+        self.assertTrue(allowed)
+        self.assertFalse(claimed)
+        allowed, claimed = bot.check_access(111111)
+        self.assertFalse(allowed)
+        self.assertFalse(claimed)
+        self.assertIsNone(bot._read_owner())  # no file created in static mode
+
+
 class BuildApplicationTest(unittest.TestCase):
     def test_builds_offline_with_handlers(self):
         app = bot.build_bot_application("9270152200:AAGOQMqOj8Z0P93j8albAuHN9hvgYoV8rF8")

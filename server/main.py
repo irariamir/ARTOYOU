@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -23,42 +24,85 @@ logger = logging.getLogger("artoyou")
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 
+BOT_RETRY_SECONDS = 30
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Start the Telegram bot (if configured) alongside the web server."""
+    """Start the Telegram bot (if configured) alongside the web server.
+
+    The bot supervisor retries forever (every BOT_RETRY_SECONDS) so the
+    operator can simply start the app before their VPN/proxy is up and the
+    bot will connect by itself once the network allows it.
+    """
     app.state.telegram_status = "disabled"
-    bot_app = None
-    if config.TELEGRAM_BOT_TOKEN:
-        try:
-            from .bot import build_bot_application
+    stop_event = asyncio.Event()
+    holder: dict = {"bot": None, "task": None}
 
-            bot_app = build_bot_application(config.TELEGRAM_BOT_TOKEN)
-            await bot_app.initialize()
-            await bot_app.start()
-            if bot_app.updater is not None:
-                await bot_app.updater.start_polling(
-                    drop_pending_updates=True, allowed_updates=["message", "callback_query"]
-                )
-            app.state.telegram_status = "running"
-            logger.info("Telegram bot started (polling).")
-        except Exception:
-            app.state.telegram_status = "error"
-            logger.exception("Telegram bot failed to start — the web app keeps working.")
+    async def _supervise_bot() -> None:
+        token = config.TELEGRAM_BOT_TOKEN
+        attempts = 0
+        while not stop_event.is_set():
+            attempts += 1
             bot_app = None
-    else:
-        logger.info("TELEGRAM_BOT_TOKEN not set — Telegram bot disabled.")
+            try:
+                from .bot import build_bot_application
 
-    yield
+                bot_app = build_bot_application(token)
+                await bot_app.initialize()
+                await bot_app.start()
+                if bot_app.updater is not None:
+                    await bot_app.updater.start_polling(
+                        drop_pending_updates=True, allowed_updates=["message", "callback_query"]
+                    )
+                holder["bot"] = bot_app
+                app.state.telegram_status = "running"
+                logger.info("Telegram bot started (attempt %d).", attempts)
+                return
+            except asyncio.CancelledError:
+                await _shutdown_bot(bot_app)
+                raise
+            except Exception as exc:
+                app.state.telegram_status = "retrying"
+                await _shutdown_bot(bot_app)
+                logger.warning("Telegram bot unreachable (attempt %d): %s — retrying in %ds…",
+                               attempts, exc, BOT_RETRY_SECONDS)
+                try:
+                    await asyncio.wait_for(stop_event.wait(), timeout=BOT_RETRY_SECONDS)
+                    return
+                except asyncio.TimeoutError:
+                    continue
 
-    if bot_app is not None:
+    async def _shutdown_bot(bot_app) -> None:
+        if bot_app is None:
+            return
         try:
             if bot_app.updater is not None and bot_app.updater.running:
                 await bot_app.updater.stop()
             await bot_app.stop()
             await bot_app.shutdown()
-            logger.info("Telegram bot stopped.")
         except Exception:
-            logger.exception("Error while stopping the Telegram bot.")
+            logger.debug("Bot shutdown attempt failed (expected when it never connected).")
+
+    if config.TELEGRAM_BOT_TOKEN:
+        app.state.telegram_status = "connecting"
+        holder["task"] = asyncio.create_task(_supervise_bot())
+    else:
+        logger.info("TELEGRAM_BOT_TOKEN not set — Telegram bot disabled.")
+
+    yield
+
+    stop_event.set()
+    task = holder["task"]
+    if task is not None:
+        task.cancel()
+        try:
+            await task
+        except (asyncio.CancelledError, Exception):
+            pass
+    await _shutdown_bot(holder["bot"])
+    if holder["bot"] is not None:
+        logger.info("Telegram bot stopped.")
 
 
 app = FastAPI(title="ARTOYOU", version=__version__, docs_url=None, redoc_url=None, lifespan=lifespan)
